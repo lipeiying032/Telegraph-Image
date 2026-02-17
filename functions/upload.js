@@ -15,8 +15,8 @@ export async function onRequestPost(context) {
             throw new Error('No file uploaded');
         }
 
-        const fileName = uploadFile.name;
-        const fileExtension = fileName.split('.').pop().toLowerCase();
+        const fileName = uploadFile.name || 'upload.bin';
+        const fileExtension = getFileExtension(fileName);
 
         const telegramFormData = new FormData();
         telegramFormData.append("chat_id", env.TG_Chat_ID);
@@ -56,8 +56,10 @@ export async function onRequestPost(context) {
         }
 
         // 将文件信息保存到 KV 存储
+        const storageId = fileExtension ? `${fileId}.${fileExtension}` : fileId;
+
         if (env.img_url) {
-            await env.img_url.put(`${fileId}.${fileExtension}`, "", {
+            await env.img_url.put(storageId, "", {
                 metadata: {
                     TimeStamp: Date.now(),
                     ListType: "None",
@@ -71,7 +73,7 @@ export async function onRequestPost(context) {
         }
 
         return new Response(
-            JSON.stringify([{ 'src': `/file/${fileId}.${fileExtension}` }]),
+            JSON.stringify([{ 'src': `/file/${storageId}` }]),
             {
                 status: 200,
                 headers: { 'Content-Type': 'application/json' }
@@ -87,6 +89,11 @@ export async function onRequestPost(context) {
             }
         );
     }
+}
+
+function getFileExtension(fileName) {
+    const ext = fileName.includes('.') ? fileName.split('.').pop().toLowerCase() : '';
+    return /^[a-z0-9]{1,10}$/.test(ext) ? ext : '';
 }
 
 /**
